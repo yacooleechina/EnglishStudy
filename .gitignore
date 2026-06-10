@@ -1,0 +1,21 @@
+# Xcode
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xccheckout
+*.xcscmblueprint
+
+# Build and distribution artifacts
+build/
+EnglishStudyApp/Distribution/
+*.ipa
+*.dSYM
+*.zip
+
+# macOS
+.DS_Store
+
+# Local secrets and environment
+*.xcconfig.local
+.env
+.env.*
