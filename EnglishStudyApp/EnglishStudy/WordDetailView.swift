@@ -17,7 +17,7 @@ struct WordDetailView: View {
                 .buttonStyle(PrimaryPillButtonStyle())
 
                 NavigationLink {
-                    PronunciationQuizView()
+                    PronunciationQuizView(item: item)
                 } label: {
                     Label("练发音", systemImage: "waveform")
                 }

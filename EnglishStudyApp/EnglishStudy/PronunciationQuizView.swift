@@ -3,14 +3,19 @@ import SwiftUI
 struct PronunciationQuizView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var speech = SpeechEvaluator()
+    let item: StudyWord?
     @State private var result: PronunciationResult?
     @State private var showsMeaning = false
     @State private var isPreparingRecording = false
     @State private var archiveMessage: String?
 
+    init(item: StudyWord? = nil) {
+        self.item = item
+    }
+
     var body: some View {
         AppScreen(title: "发音练习", subtitle: "先听标准发音，再录音朗读，系统会识别并反馈。") {
-            if let item = appState.currentWord {
+            if let item = item ?? appState.currentWord {
                 WordHero(word: item.word, caption: "听、读、校正")
 
                 Text("已正确 \(appState.successfulChecks(for: item))/3 次")
@@ -85,7 +90,7 @@ struct PronunciationQuizView: View {
                             archiveMessage = nil
                             do {
                                 try speech.start { transcript in
-                                    evaluatePronunciation(target: item.word, transcript: transcript)
+                                    evaluatePronunciation(item: item, transcript: transcript)
                                 }
                             } catch {
                                 appState.errorMessage = error.localizedDescription
@@ -98,16 +103,18 @@ struct PronunciationQuizView: View {
                 .buttonStyle(PrimaryPillButtonStyle(tint: speech.isRecording ? AppTheme.red : AppTheme.blue))
                 .disabled(isPreparingRecording)
 
-                Button {
-                    speech.stop()
-                    result = nil
-                    showsMeaning = false
-                    archiveMessage = nil
-                    appState.nextWord()
-                } label: {
-                    Label("下一个", systemImage: "arrow.right.circle")
+                if self.item == nil {
+                    Button {
+                        speech.stop()
+                        result = nil
+                        showsMeaning = false
+                        archiveMessage = nil
+                        appState.nextWord()
+                    } label: {
+                        Label("下一个", systemImage: "arrow.right.circle")
+                    }
+                    .buttonStyle(SecondaryPillButtonStyle())
                 }
-                .buttonStyle(SecondaryPillButtonStyle())
 
                 if let result {
                     GlassPanel {
@@ -150,10 +157,10 @@ struct PronunciationQuizView: View {
         return speech.isRecording ? "正在识别…" : "开始录音"
     }
 
-    private func evaluatePronunciation(target: String, transcript: String) {
-        let evaluation = QuizEngine.evaluatePronunciation(target: target, transcript: transcript)
+    private func evaluatePronunciation(item: StudyWord, transcript: String) {
+        let evaluation = QuizEngine.evaluatePronunciation(target: item.word, transcript: transcript)
         result = evaluation
-        if evaluation.grade == .correct, let item = appState.words.first(where: { $0.word == target }) {
+        if evaluation.grade == .correct {
             Task {
                 let archived = await appState.recordCorrectCheck(for: item)
                 if archived {
@@ -162,7 +169,7 @@ struct PronunciationQuizView: View {
                 }
             }
         } else if !evaluation.grade.isPassing {
-            speech.speakCorrection(for: target)
+            speech.speakCorrection(for: item.word)
         }
     }
 }
