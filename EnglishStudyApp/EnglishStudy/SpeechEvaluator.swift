@@ -78,15 +78,19 @@ final class SpeechEvaluator: ObservableObject {
         scheduleTimeout()
 
         task = recognizer?.recognitionTask(with: request) { [weak self] result, error in
-            Task { @MainActor in
-                if let result {
-                    self?.transcript = result.bestTranscription.formattedString
-                    if !result.bestTranscription.formattedString.isEmpty {
-                        self?.scheduleSilenceFinish()
+            let recognizedText = result?.bestTranscription.formattedString
+            let shouldFinish = error != nil || result?.isFinal == true
+
+            DispatchQueue.main.async {
+                guard let self else { return }
+                if let recognizedText {
+                    self.transcript = recognizedText
+                    if !recognizedText.isEmpty {
+                        self.scheduleSilenceFinish()
                     }
                 }
-                if error != nil || result?.isFinal == true {
-                    self?.finishRecognition()
+                if shouldFinish {
+                    self.finishRecognition()
                 }
             }
         }
@@ -116,11 +120,6 @@ final class SpeechEvaluator: ObservableObject {
         silenceTask?.cancel()
         silenceTask = nil
 
-        task?.cancel()
-        task = nil
-        request?.endAudio()
-        request = nil
-
         if let audioEngine {
             if audioEngine.isRunning {
                 audioEngine.stop()
@@ -131,6 +130,11 @@ final class SpeechEvaluator: ObservableObject {
             }
         }
         audioEngine = nil
+
+        request?.endAudio()
+        request = nil
+        task?.cancel()
+        task = nil
 
         if wasUsingRecordingResources {
             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
