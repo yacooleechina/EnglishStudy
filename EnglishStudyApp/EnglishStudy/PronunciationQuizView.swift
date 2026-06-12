@@ -6,11 +6,26 @@ struct PronunciationQuizView: View {
     @State private var result: PronunciationResult?
     @State private var showsMeaning = false
     @State private var isPreparingRecording = false
+    @State private var archiveMessage: String?
 
     var body: some View {
         AppScreen(title: "发音练习", subtitle: "先听标准发音，再录音朗读，系统会识别并反馈。") {
             if let item = appState.currentWord {
                 WordHero(word: item.word, caption: "听、读、校正")
+
+                Text("已正确 \(appState.successfulChecks(for: item))/3 次")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.muted)
+
+                if let archiveMessage {
+                    GlassPanel {
+                        Label("已归档", systemImage: "archivebox.fill")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.green)
+                        Text(archiveMessage)
+                            .foregroundStyle(AppTheme.muted)
+                    }
+                }
 
                 GlassPanel {
                     HStack {
@@ -67,6 +82,7 @@ struct PronunciationQuizView: View {
                             await speech.requestPermissions()
                             isPreparingRecording = false
                             result = nil
+                            archiveMessage = nil
                             do {
                                 try speech.start { transcript in
                                     evaluatePronunciation(target: item.word, transcript: transcript)
@@ -86,6 +102,7 @@ struct PronunciationQuizView: View {
                     speech.stop()
                     result = nil
                     showsMeaning = false
+                    archiveMessage = nil
                     appState.nextWord()
                 } label: {
                     Label("下一个", systemImage: "arrow.right.circle")
@@ -136,7 +153,15 @@ struct PronunciationQuizView: View {
     private func evaluatePronunciation(target: String, transcript: String) {
         let evaluation = QuizEngine.evaluatePronunciation(target: target, transcript: transcript)
         result = evaluation
-        if !evaluation.grade.isPassing {
+        if evaluation.grade == .correct, let item = appState.words.first(where: { $0.word == target }) {
+            Task {
+                let archived = await appState.recordCorrectCheck(for: item)
+                if archived {
+                    result = nil
+                    archiveMessage = "\(item.word) 已累计正确 3 次，并移出中文和发音练习。"
+                }
+            }
+        } else if !evaluation.grade.isPassing {
             speech.speakCorrection(for: target)
         }
     }

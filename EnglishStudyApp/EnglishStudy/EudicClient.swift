@@ -23,6 +23,36 @@ struct EudicClient {
         return envelope.data ?? []
     }
 
+    func createCategory(name: String) async throws -> WordbookCategory {
+        let request = try makeJSONRequest(
+            path: "studylist/category",
+            method: "POST",
+            body: CategoryRequest(language: language, name: name)
+        )
+        let envelope = try await decode(EudicEnvelope<WordbookCategory>.self, from: request)
+        guard let category = envelope.data else {
+            throw EudicError.invalidResponse
+        }
+        return category
+    }
+
+    func archive(_ item: StudyWord, categoryId: String) async throws {
+        guard let numericCategoryId = Int64(categoryId) else {
+            throw EudicError.invalidCategoryId
+        }
+        let request = try makeJSONRequest(
+            path: "studylist/word",
+            method: "POST",
+            body: WordArchiveRequest(
+                language: language,
+                word: item.word,
+                exp: item.exp,
+                categoryIds: [numericCategoryId]
+            )
+        )
+        _ = try await responseData(from: request)
+    }
+
     func words(categoryId: String? = nil, page: Int = 0, pageSize: Int = 100) async throws -> [StudyWord] {
         var query = [
             URLQueryItem(name: "language", value: language),
@@ -145,14 +175,49 @@ struct EudicClient {
         return request
     }
 
+    private func makeJSONRequest<Body: Encodable>(
+        path: String,
+        method: String,
+        body: Body
+    ) throws -> URLRequest {
+        var request = try makeRequest(path: path)
+        request.httpMethod = method
+        request.httpBody = try JSONEncoder().encode(body)
+        return request
+    }
+
     private func decode<Value: Decodable>(_ type: Value.Type, from request: URLRequest) async throws -> Value {
+        let data = try await responseData(from: request)
+        return try JSONDecoder().decode(type, from: data)
+    }
+
+    private func responseData(from request: URLRequest) async throws -> Data {
         let (data, response) = try await Self.session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw EudicError.invalidResponse }
         guard 200..<300 ~= httpResponse.statusCode else {
             let body = String(decoding: data, as: UTF8.self)
             throw EudicError.server(status: httpResponse.statusCode, body: body)
         }
-        return try JSONDecoder().decode(type, from: data)
+        return data
+    }
+}
+
+private struct CategoryRequest: Encodable {
+    let language: String
+    let name: String
+}
+
+private struct WordArchiveRequest: Encodable {
+    let language: String
+    let word: String
+    let exp: String?
+    let categoryIds: [Int64]
+
+    enum CodingKeys: String, CodingKey {
+        case language
+        case word
+        case exp
+        case categoryIds = "category_ids"
     }
 }
 
@@ -160,6 +225,7 @@ enum EudicError: LocalizedError {
     case missingAuthorization
     case invalidURL
     case invalidResponse
+    case invalidCategoryId
     case server(status: Int, body: String)
 
     var errorDescription: String? {
@@ -170,6 +236,8 @@ enum EudicError: LocalizedError {
             return "欧路 API 地址无效。"
         case .invalidResponse:
             return "欧路 API 返回无效响应。"
+        case .invalidCategoryId:
+            return "欧路归档分组 ID 无效。"
         case .server(let status, let body):
             return "欧路 API 返回 \(status)：\(body)"
         }

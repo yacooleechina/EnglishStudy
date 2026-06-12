@@ -5,12 +5,26 @@ struct MeaningQuizView: View {
     @StateObject private var speech = SpeechEvaluator()
     @State private var answer = ""
     @State private var result: MeaningResult?
+    @State private var archiveMessage: String?
     @FocusState private var isAnswerFocused: Bool
 
     var body: some View {
         AppScreen(title: "中文意思", subtitle: "输入中文释义，系统会和欧路释义做匹配。") {
             if let item = appState.currentWord {
                 WordHero(word: item.word, caption: "写出中文意思")
+
+                Text("已正确 \(appState.successfulChecks(for: item))/3 次")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.muted)
+
+                if let archiveMessage {
+                    ResultPanel(
+                        title: "已归档",
+                        detail: archiveMessage,
+                        systemImage: "archivebox.fill",
+                        tint: AppTheme.green
+                    )
+                }
 
                 Button {
                     speech.speakCorrection(for: item.word)
@@ -41,7 +55,18 @@ struct MeaningQuizView: View {
 
                 HStack {
                     Button {
-                        result = QuizEngine.evaluateMeaning(answer: answer, expected: item.exp)
+                        let evaluation = QuizEngine.evaluateMeaning(answer: answer, expected: item.exp)
+                        result = evaluation
+                        if evaluation.grade == .correct {
+                            Task {
+                                let archived = await appState.recordCorrectCheck(for: item)
+                                if archived {
+                                    answer = ""
+                                    result = nil
+                                    archiveMessage = "\(item.word) 已累计正确 3 次，并移出中文和发音练习。"
+                                }
+                            }
+                        }
                     } label: {
                         Label("检查", systemImage: "checkmark.circle")
                     }
@@ -50,6 +75,7 @@ struct MeaningQuizView: View {
                     Button {
                         answer = ""
                         result = nil
+                        archiveMessage = nil
                         appState.nextWord()
                         isAnswerFocused = true
                     } label: {
