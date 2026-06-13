@@ -19,6 +19,7 @@ final class SpeechEvaluator: ObservableObject {
     private var silenceTask: Task<Void, Never>?
     private var completion: ((String) -> Void)?
     private var didComplete = false
+    private var activeSessionID: UUID?
 
     func requestPermissions() async {
         guard !didRequestPermissions else { return }
@@ -46,6 +47,8 @@ final class SpeechEvaluator: ObservableObject {
         transcript = ""
         completion = onCompletion
         didComplete = false
+        let sessionID = UUID()
+        activeSessionID = sessionID
 
         let audioSession = AVAudioSession.sharedInstance()
         try audioSession.setCategory(.playAndRecord, mode: .measurement, options: [.duckOthers, .defaultToSpeaker])
@@ -70,7 +73,8 @@ final class SpeechEvaluator: ObservableObject {
             hasInputTap = false
         }
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak request] buffer, _ in
-            guard buffer.frameLength > 0 else { return }
+            let byteSize = buffer.audioBufferList.pointee.mBuffers.mDataByteSize
+            guard buffer.frameLength > 0, byteSize > 0 else { return }
             request?.append(buffer)
         }
         hasInputTap = true
@@ -85,7 +89,7 @@ final class SpeechEvaluator: ObservableObject {
             let shouldFinish = error != nil || result?.isFinal == true
 
             DispatchQueue.main.async {
-                guard let self else { return }
+                guard let self, self.activeSessionID == sessionID else { return }
                 if let recognizedText {
                     self.transcript = recognizedText
                     if !recognizedText.isEmpty {
@@ -102,7 +106,6 @@ final class SpeechEvaluator: ObservableObject {
     func stop() {
         cleanupRecording()
         completion = nil
-        didComplete = false
     }
 
     private func finishRecognition() {
@@ -118,6 +121,7 @@ final class SpeechEvaluator: ObservableObject {
     private func cleanupRecording() {
         let wasUsingRecordingResources = audioEngine != nil || request != nil || task != nil || hasInputTap || isRecording
 
+        activeSessionID = nil
         timeoutTask?.cancel()
         timeoutTask = nil
         silenceTask?.cancel()
@@ -143,6 +147,11 @@ final class SpeechEvaluator: ObservableObject {
             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         }
         isRecording = false
+    }
+
+    func resetTranscript() {
+        stop()
+        transcript = ""
     }
 
     private func scheduleTimeout() {

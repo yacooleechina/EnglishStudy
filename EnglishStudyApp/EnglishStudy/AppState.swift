@@ -254,6 +254,8 @@ final class AppState: ObservableObject {
             words.remove(at: index)
             if words.isEmpty {
                 currentIndex = 0
+            } else if index < currentIndex {
+                currentIndex -= 1
             } else if currentIndex >= words.count {
                 currentIndex = 0
             }

@@ -13,9 +13,13 @@ struct PronunciationQuizView: View {
         self.item = item
     }
 
+    private var displayedItem: StudyWord? {
+        item ?? appState.currentWord
+    }
+
     var body: some View {
         AppScreen(title: "发音练习", subtitle: "先听标准发音，再录音朗读，系统会识别并反馈。") {
-            if let item = item ?? appState.currentWord {
+            if let item = displayedItem {
                 WordHero(word: item.word, caption: "听、读、校正")
 
                 Text("已正确 \(appState.successfulChecks(for: item))/3 次")
@@ -105,10 +109,7 @@ struct PronunciationQuizView: View {
 
                 if self.item == nil {
                     Button {
-                        speech.stop()
-                        result = nil
-                        showsMeaning = false
-                        archiveMessage = nil
+                        resetForNextWord()
                         appState.nextWord()
                     } label: {
                         Label("下一个", systemImage: "arrow.right.circle")
@@ -150,6 +151,9 @@ struct PronunciationQuizView: View {
         .onDisappear {
             speech.stopAll()
         }
+        .onChange(of: displayedItem?.id) { _, _ in
+            resetForNextWord()
+        }
     }
 
     private var recordButtonTitle: String {
@@ -164,12 +168,24 @@ struct PronunciationQuizView: View {
             Task {
                 let archived = await appState.recordCorrectCheck(for: item, kind: .pronunciation)
                 if archived {
-                    result = nil
-                    archiveMessage = "\(item.word) 已累计正确 3 次，并移出中文和发音练习。"
+                    if self.item == nil {
+                        resetForNextWord()
+                    } else {
+                        result = nil
+                        speech.resetTranscript()
+                        archiveMessage = "\(item.word) 已累计正确 3 次，并移出中文和发音练习。"
+                    }
                 }
             }
         } else if !evaluation.grade.isPassing {
             speech.speakCorrection(for: item.word)
         }
+    }
+
+    private func resetForNextWord() {
+        speech.resetTranscript()
+        result = nil
+        showsMeaning = false
+        archiveMessage = nil
     }
 }

@@ -107,6 +107,9 @@ struct MeaningQuizView: View {
         .onDisappear {
             speech.stopAll()
         }
+        .onChange(of: appState.currentWord?.id) { _, _ in
+            resetForNextWord()
+        }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
@@ -126,11 +129,16 @@ struct MeaningQuizView: View {
         Task {
             let archived = await appState.recordCorrectCheck(for: item, kind: .meaning)
             if archived {
-                answer = ""
-                result = nil
-                archiveMessage = "\(item.word) 已累计正确 3 次，并移出中文和发音练习。"
+                resetForNextWord()
             }
         }
+    }
+
+    private func resetForNextWord() {
+        answer = ""
+        result = nil
+        archiveMessage = nil
+        isAnswerFocused = false
     }
 }
 
