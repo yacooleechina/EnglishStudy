@@ -7,7 +7,6 @@ import sys
 
 
 BOOKS = {
-    "gk": "high-school",
     "cet4": "cet4",
     "cet6": "cet6",
     "toefl": "toefl",
@@ -33,6 +32,7 @@ def main():
     output = pathlib.Path(sys.argv[2])
     output.mkdir(parents=True, exist_ok=True)
     collected = {tag: [] for tag in BOOKS}
+    collected["high-school"] = []
 
     with source.open(newline="", encoding="utf-8") as handle:
         for row in csv.DictReader(handle):
@@ -42,18 +42,23 @@ def main():
             if not word or not translation:
                 continue
 
+            if tags.intersection({"zk", "gk"}):
+                collected["high-school"].append(row)
+
             for tag in tags.intersection(BOOKS):
                 collected[tag].append(row)
 
-    for tag, filename in BOOKS.items():
+    outputs = {"high-school": "high-school", **BOOKS}
+    for tag, filename in outputs.items():
         rows = sorted(collected[tag], key=ranking)
-        words = [
-            {
+        words_by_id = {}
+        for row in rows:
+            item = {
                 "word": row["word"].strip(),
                 "exp": row["translation"].strip(),
             }
-            for row in rows
-        ]
+            words_by_id.setdefault(item["word"].lower(), item)
+        words = list(words_by_id.values())
         target = output / f"{filename}.json"
         target.write_text(
             json.dumps(words, ensure_ascii=False, separators=(",", ":")),

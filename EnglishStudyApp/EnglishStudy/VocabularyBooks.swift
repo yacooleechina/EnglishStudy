@@ -10,7 +10,7 @@ enum BuiltinVocabularyBook: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .highSchool: return "高中词汇"
+        case .highSchool: return "初高中词汇"
         case .cet4: return "大学英语四级"
         case .cet6: return "大学英语六级"
         case .toefl: return "托福词汇"
