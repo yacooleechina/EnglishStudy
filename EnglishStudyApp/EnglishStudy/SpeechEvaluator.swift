@@ -42,7 +42,7 @@ final class SpeechEvaluator: ObservableObject {
         }
     }
 
-    func start(onCompletion: @escaping (String) -> Void) throws {
+    func start(expectedWord: String, onCompletion: @escaping (String) -> Void) throws {
         stop()
         transcript = ""
         completion = onCompletion
@@ -56,6 +56,11 @@ final class SpeechEvaluator: ObservableObject {
 
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
+        request.taskHint = .confirmation
+        let normalizedWord = expectedWord.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !normalizedWord.isEmpty {
+            request.contextualStrings = [normalizedWord]
+        }
         if recognizer?.supportsOnDeviceRecognition == true {
             request.requiresOnDeviceRecognition = true
         }
@@ -64,7 +69,7 @@ final class SpeechEvaluator: ObservableObject {
         let audioEngine = AVAudioEngine()
         self.audioEngine = audioEngine
         let inputNode = audioEngine.inputNode
-        let format = inputNode.outputFormat(forBus: 0)
+        let format = inputNode.inputFormat(forBus: 0)
         guard format.sampleRate > 0, format.channelCount > 0 else {
             throw SpeechEvaluatorError.unavailableAudioInput
         }
@@ -72,11 +77,12 @@ final class SpeechEvaluator: ObservableObject {
             inputNode.removeTap(onBus: 0)
             hasInputTap = false
         }
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak request] buffer, _ in
-            let byteSize = buffer.audioBufferList.pointee.mBuffers.mDataByteSize
-            guard buffer.frameLength > 0, byteSize > 0 else { return }
-            request?.append(buffer)
-        }
+        inputNode.installTap(
+            onBus: 0,
+            bufferSize: 1024,
+            format: format,
+            block: Self.makeAudioTapHandler(request: request)
+        )
         hasInputTap = true
 
         audioEngine.prepare()
@@ -84,23 +90,10 @@ final class SpeechEvaluator: ObservableObject {
         isRecording = true
         scheduleTimeout()
 
-        task = recognizer?.recognitionTask(with: request) { [weak self] result, error in
-            let recognizedText = result?.bestTranscription.formattedString
-            let shouldFinish = error != nil || result?.isFinal == true
-
-            DispatchQueue.main.async {
-                guard let self, self.activeSessionID == sessionID else { return }
-                if let recognizedText {
-                    self.transcript = recognizedText
-                    if !recognizedText.isEmpty {
-                        self.scheduleSilenceFinish()
-                    }
-                }
-                if shouldFinish {
-                    self.finishRecognition()
-                }
-            }
-        }
+        task = recognizer?.recognitionTask(
+            with: request,
+            resultHandler: Self.makeRecognitionHandler(owner: self, sessionID: sessionID)
+        )
     }
 
     func stop() {
@@ -128,13 +121,14 @@ final class SpeechEvaluator: ObservableObject {
         silenceTask = nil
 
         if let audioEngine {
-            if audioEngine.isRunning {
-                audioEngine.stop()
-            }
             if hasInputTap {
                 audioEngine.inputNode.removeTap(onBus: 0)
                 hasInputTap = false
             }
+            if audioEngine.isRunning {
+                audioEngine.stop()
+            }
+            audioEngine.reset()
         }
         audioEngine = nil
 
@@ -147,6 +141,55 @@ final class SpeechEvaluator: ObservableObject {
             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         }
         isRecording = false
+    }
+
+    nonisolated private static func makeAudioTapHandler(
+        request: SFSpeechAudioBufferRecognitionRequest
+    ) -> AVAudioNodeTapBlock {
+        { buffer, _ in
+            guard buffer.frameLength > 0 else { return }
+            let buffers = UnsafeMutableAudioBufferListPointer(buffer.mutableAudioBufferList)
+            guard buffers.contains(where: {
+                $0.mData != nil && $0.mDataByteSize > 0
+            }) else {
+                return
+            }
+            request.append(buffer)
+        }
+    }
+
+    nonisolated private static func makeRecognitionHandler(
+        owner: SpeechEvaluator,
+        sessionID: UUID
+    ) -> (SFSpeechRecognitionResult?, Error?) -> Void {
+        { [weak owner] result, error in
+            let recognizedText = result?.bestTranscription.formattedString
+            let shouldFinish = error != nil || result?.isFinal == true
+            Task { @MainActor [weak owner] in
+                owner?.receiveRecognitionUpdate(
+                    recognizedText: recognizedText,
+                    shouldFinish: shouldFinish,
+                    sessionID: sessionID
+                )
+            }
+        }
+    }
+
+    private func receiveRecognitionUpdate(
+        recognizedText: String?,
+        shouldFinish: Bool,
+        sessionID: UUID
+    ) {
+        guard activeSessionID == sessionID else { return }
+        if let recognizedText {
+            transcript = recognizedText
+            if !recognizedText.isEmpty {
+                scheduleSilenceFinish()
+            }
+        }
+        if shouldFinish {
+            finishRecognition()
+        }
     }
 
     func resetTranscript() {

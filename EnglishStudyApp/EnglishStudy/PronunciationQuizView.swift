@@ -93,7 +93,7 @@ struct PronunciationQuizView: View {
                             result = nil
                             archiveMessage = nil
                             do {
-                                try speech.start { transcript in
+                                try speech.start(expectedWord: item.word) { transcript in
                                     evaluatePronunciation(item: item, transcript: transcript)
                                 }
                             } catch {
