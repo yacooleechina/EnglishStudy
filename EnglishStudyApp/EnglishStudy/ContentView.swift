@@ -15,6 +15,8 @@ struct ContentView: View {
                     Divider()
                     HomeLink(title: "发音练习", systemImage: "waveform", destination: PronunciationQuizView())
                     Divider()
+                    HomeLink(title: "学习成果", systemImage: "chart.bar.doc.horizontal", destination: LearningProgressView())
+                    Divider()
                     HomeLink(title: "已归档单词", systemImage: "archivebox", destination: ArchivedWordsView())
                     Divider()
                     HomeLink(title: "设置", systemImage: "gearshape", destination: SettingsView())

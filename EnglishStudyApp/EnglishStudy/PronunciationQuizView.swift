@@ -162,7 +162,7 @@ struct PronunciationQuizView: View {
         result = evaluation
         if evaluation.grade == .correct {
             Task {
-                let archived = await appState.recordCorrectCheck(for: item)
+                let archived = await appState.recordCorrectCheck(for: item, kind: .pronunciation)
                 if archived {
                     result = nil
                     archiveMessage = "\(item.word) 已累计正确 3 次，并移出中文和发音练习。"

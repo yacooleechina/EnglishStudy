@@ -23,6 +23,7 @@
 		1A000001000000000000000E /* WordDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A000101000000000000000E /* WordDetailView.swift */; };
 		1A000001000000000000000F /* VocabularyBooks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A000101000000000000000F /* VocabularyBooks.swift */; };
 		1A0000010000000000000010 /* VocabularyBooksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0001010000000000000010 /* VocabularyBooksView.swift */; };
+		1A0000010000000000000011 /* LearningProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0001010000000000000011 /* LearningProgressView.swift */; };
 		1A0000020000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A0001020000000000000001 /* Assets.xcassets */; };
 		1A0000020000000000000002 /* high-school.json in Resources */ = {isa = PBXBuildFile; fileRef = 1A0001020000000000000002 /* high-school.json */; };
 		1A0000020000000000000003 /* cet4.json in Resources */ = {isa = PBXBuildFile; fileRef = 1A0001020000000000000003 /* cet4.json */; };
@@ -48,6 +49,7 @@
 		1A000101000000000000000E /* WordDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordDetailView.swift; sourceTree = "<group>"; };
 		1A000101000000000000000F /* VocabularyBooks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyBooks.swift; sourceTree = "<group>"; };
 		1A0001010000000000000010 /* VocabularyBooksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyBooksView.swift; sourceTree = "<group>"; };
+		1A0001010000000000000011 /* LearningProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningProgressView.swift; sourceTree = "<group>"; };
 		1A0001020000000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1A0001020000000000000002 /* high-school.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = VocabularyData/high-school.json; sourceTree = "<group>"; };
 		1A0001020000000000000003 /* cet4.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = VocabularyData/cet4.json; sourceTree = "<group>"; };
@@ -95,6 +97,7 @@
 				1A000101000000000000000E /* WordDetailView.swift */,
 				1A000101000000000000000F /* VocabularyBooks.swift */,
 				1A0001010000000000000010 /* VocabularyBooksView.swift */,
+				1A0001010000000000000011 /* LearningProgressView.swift */,
 				1A0001020000000000000001 /* Assets.xcassets */,
 				1A0001020000000000000002 /* high-school.json */,
 				1A0001020000000000000003 /* cet4.json */,
@@ -203,6 +206,7 @@
 				1A000001000000000000000E /* WordDetailView.swift in Sources */,
 				1A000001000000000000000F /* VocabularyBooks.swift in Sources */,
 				1A0000010000000000000010 /* VocabularyBooksView.swift in Sources */,
+				1A0000010000000000000011 /* LearningProgressView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

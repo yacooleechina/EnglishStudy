@@ -111,3 +111,16 @@ struct PronunciationResult {
     let transcript: String
     let explanation: String
 }
+
+enum PracticeKind: String, Codable, Hashable {
+    case meaning
+    case pronunciation
+}
+
+struct LearningProgressSection: Identifiable {
+    let id: String
+    let title: String
+    let totalCount: Int
+    let meaningWords: [StudyWord]
+    let pronunciationWords: [StudyWord]
+}

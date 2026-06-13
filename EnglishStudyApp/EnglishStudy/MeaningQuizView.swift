@@ -37,9 +37,13 @@ struct MeaningQuizView: View {
                     Text("你的答案")
                         .font(.headline)
                         .foregroundStyle(AppTheme.ink)
-                    TextField("例如：放弃、坚持、扩大", text: $answer, axis: .vertical)
+                    TextField("例如：放弃、坚持、扩大", text: $answer)
                         .textFieldStyle(.plain)
                         .focused($isAnswerFocused)
+                        .submitLabel(.done)
+                        .onSubmit {
+                            checkAnswer(for: item)
+                        }
                         .font(.title3.weight(.medium))
                         .foregroundStyle(AppTheme.ink)
                         .tint(AppTheme.blue)
@@ -55,18 +59,7 @@ struct MeaningQuizView: View {
 
                 HStack {
                     Button {
-                        let evaluation = QuizEngine.evaluateMeaning(answer: answer, expected: item.exp)
-                        result = evaluation
-                        if evaluation.grade == .correct {
-                            Task {
-                                let archived = await appState.recordCorrectCheck(for: item)
-                                if archived {
-                                    answer = ""
-                                    result = nil
-                                    archiveMessage = "\(item.word) 已累计正确 3 次，并移出中文和发音练习。"
-                                }
-                            }
-                        }
+                        checkAnswer(for: item)
                     } label: {
                         Label("检查", systemImage: "checkmark.circle")
                     }
@@ -113,6 +106,30 @@ struct MeaningQuizView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onDisappear {
             speech.stopAll()
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("完成") {
+                    isAnswerFocused = false
+                }
+            }
+        }
+    }
+
+    private func checkAnswer(for item: StudyWord) {
+        isAnswerFocused = false
+        let evaluation = QuizEngine.evaluateMeaning(answer: answer, expected: item.exp)
+        result = evaluation
+        guard evaluation.grade == .correct else { return }
+
+        Task {
+            let archived = await appState.recordCorrectCheck(for: item, kind: .meaning)
+            if archived {
+                answer = ""
+                result = nil
+                archiveMessage = "\(item.word) 已累计正确 3 次，并移出中文和发音练习。"
+            }
         }
     }
 }

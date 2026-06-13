@@ -12,6 +12,8 @@ final class AppState: ObservableObject {
     @Published var words: [StudyWord] = []
     @Published private(set) var archivedWords: [StudyWord] = []
     @Published private(set) var importedVocabularyBookIds = Set<String>()
+    @Published private(set) var completedMeaningIds = Set<String>()
+    @Published private(set) var completedPronunciationIds = Set<String>()
     @Published var selectedCategoryId: String?
     @Published var currentIndex = 0
     @Published var isLoading = false
@@ -21,6 +23,7 @@ final class AppState: ObservableObject {
     private var pendingArchiveIds = Set<String>()
     private var remoteCategories: [WordbookCategory] = []
     private var remoteWords: [StudyWord] = []
+    private var completedWordSnapshots: [String: StudyWord] = [:]
 
     private static let usernameKey = "eudic.username"
     private static let archiveCategoryName = "已归档单词"
@@ -28,6 +31,9 @@ final class AppState: ObservableObject {
     private static let successCountsKey = "study.successCounts"
     private static let pendingArchiveIdsKey = "study.pendingArchiveIds"
     private static let importedVocabularyBookIdsKey = "study.importedVocabularyBookIds"
+    private static let completedMeaningIdsKey = "study.completedMeaningIds"
+    private static let completedPronunciationIdsKey = "study.completedPronunciationIds"
+    private static let completedWordSnapshotsKey = "study.completedWordSnapshots"
     private static let archiveThreshold = 3
 
     init() {
@@ -52,6 +58,16 @@ final class AppState: ObservableObject {
         }
         if let savedIds = UserDefaults.standard.stringArray(forKey: Self.importedVocabularyBookIdsKey) {
             importedVocabularyBookIds = Set(savedIds)
+        }
+        if let savedIds = UserDefaults.standard.stringArray(forKey: Self.completedMeaningIdsKey) {
+            completedMeaningIds = Set(savedIds)
+        }
+        if let savedIds = UserDefaults.standard.stringArray(forKey: Self.completedPronunciationIdsKey) {
+            completedPronunciationIds = Set(savedIds)
+        }
+        if let data = UserDefaults.standard.data(forKey: Self.completedWordSnapshotsKey),
+           let savedWords = try? JSONDecoder().decode([String: StudyWord].self, from: data) {
+            completedWordSnapshots = savedWords
         }
 
         refreshCategoryList()
@@ -163,7 +179,9 @@ final class AppState: ObservableObject {
         successCounts[item.id, default: 0]
     }
 
-    func recordCorrectCheck(for item: StudyWord) async -> Bool {
+    func recordCorrectCheck(for item: StudyWord, kind: PracticeKind) async -> Bool {
+        recordCompletion(for: item, kind: kind)
+
         if archivedWords.contains(where: { $0.id == item.id }) {
             return true
         }
@@ -195,6 +213,36 @@ final class AppState: ObservableObject {
             errorMessage = "单词已在本机归档，但同步到欧路失败：\(error.localizedDescription)"
         }
         return true
+    }
+
+    func learningProgressSections() -> [LearningProgressSection] {
+        practiceCategories.compactMap { category in
+            let categoryWords: [StudyWord]
+            if let book = BuiltinVocabularyBook.book(forCategoryId: category.id) {
+                categoryWords = (try? VocabularyBookStore.words(for: book)) ?? []
+            } else {
+                categoryWords = completedWordSnapshots.values.filter {
+                    $0.categoryIds?.contains(category.id) == true
+                }
+            }
+
+            var seenIds = Set<String>()
+            let uniqueWords = categoryWords.filter { seenIds.insert($0.id).inserted }
+            let meaningWords = uniqueWords
+                .filter { completedMeaningIds.contains($0.id) }
+                .sorted { $0.word.localizedCaseInsensitiveCompare($1.word) == .orderedAscending }
+            let pronunciationWords = uniqueWords
+                .filter { completedPronunciationIds.contains($0.id) }
+                .sorted { $0.word.localizedCaseInsensitiveCompare($1.word) == .orderedAscending }
+
+            return LearningProgressSection(
+                id: category.id,
+                title: category.name,
+                totalCount: uniqueWords.count,
+                meaningWords: meaningWords,
+                pronunciationWords: pronunciationWords
+            )
+        }
     }
 
     private func archiveLocally(_ item: StudyWord) {
@@ -258,6 +306,38 @@ final class AppState: ObservableObject {
             UserDefaults.standard.set(data, forKey: Self.successCountsKey)
         }
         UserDefaults.standard.set(Array(pendingArchiveIds), forKey: Self.pendingArchiveIdsKey)
+        UserDefaults.standard.set(Array(completedMeaningIds), forKey: Self.completedMeaningIdsKey)
+        UserDefaults.standard.set(
+            Array(completedPronunciationIds),
+            forKey: Self.completedPronunciationIdsKey
+        )
+        if let data = try? JSONEncoder().encode(completedWordSnapshots) {
+            UserDefaults.standard.set(data, forKey: Self.completedWordSnapshotsKey)
+        }
+    }
+
+    private func recordCompletion(for item: StudyWord, kind: PracticeKind) {
+        var snapshot = item
+        if let selectedCategoryId,
+           BuiltinVocabularyBook.book(forCategoryId: selectedCategoryId) == nil,
+           snapshot.categoryIds?.contains(selectedCategoryId) != true {
+            snapshot = StudyWord(
+                word: item.word,
+                exp: item.exp,
+                addTime: item.addTime,
+                star: item.star,
+                contextLine: item.contextLine,
+                categoryIds: (item.categoryIds ?? []) + [selectedCategoryId]
+            )
+        }
+        completedWordSnapshots[item.id] = snapshot
+        switch kind {
+        case .meaning:
+            completedMeaningIds.insert(item.id)
+        case .pronunciation:
+            completedPronunciationIds.insert(item.id)
+        }
+        saveProgress()
     }
 
     private func saveImportedVocabularyBooks() {
