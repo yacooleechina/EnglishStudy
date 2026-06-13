@@ -150,6 +150,7 @@ final class AppState: ObservableObject {
         saveImportedVocabularyBooks()
         refreshCategoryList()
         rebuildVisibleWords()
+        VocabularyBookStore.discard(book)
         currentIndex = 0
     }
 

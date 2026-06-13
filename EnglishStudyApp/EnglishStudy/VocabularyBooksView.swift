@@ -17,7 +17,7 @@ struct VocabularyBooksView: View {
                             Text(book.title)
                                 .font(.headline)
                                 .foregroundStyle(AppTheme.ink)
-                            Text("\(VocabularyBookStore.count(for: book)) 个单词")
+                            Text("\(book.wordCount) 个单词")
                                 .font(.subheadline)
                                 .foregroundStyle(AppTheme.muted)
                         }

@@ -53,6 +53,9 @@ final class SpeechEvaluator: ObservableObject {
 
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
+        if recognizer?.supportsOnDeviceRecognition == true {
+            request.requiresOnDeviceRecognition = true
+        }
         self.request = request
 
         let audioEngine = AVAudioEngine()

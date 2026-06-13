@@ -44,6 +44,15 @@ enum BuiltinVocabularyBook: String, CaseIterable, Identifiable {
         }
     }
 
+    var wordCount: Int {
+        switch self {
+        case .highSchool: return 3726
+        case .cet4: return 3849
+        case .cet6: return 5407
+        case .toefl: return 6974
+        }
+    }
+
     var category: WordbookCategory {
         WordbookCategory(id: id, name: title, language: "en")
     }
@@ -73,8 +82,8 @@ enum VocabularyBookStore {
         return words
     }
 
-    static func count(for book: BuiltinVocabularyBook) -> Int {
-        (try? words(for: book).count) ?? 0
+    static func discard(_ book: BuiltinVocabularyBook) {
+        cache.removeValue(forKey: book)
     }
 }
 
