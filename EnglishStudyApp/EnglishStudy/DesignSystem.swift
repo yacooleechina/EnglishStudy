@@ -161,3 +161,42 @@ struct WordHero: View {
         .shadow(color: AppTheme.blue.opacity(0.24), radius: 22, y: 12)
     }
 }
+
+struct PracticeBookPicker: View {
+    @EnvironmentObject private var appState: AppState
+    let onSelectionChanged: () -> Void
+
+    var body: some View {
+        GlassPanel {
+            HStack(spacing: 12) {
+                Label("练习词书", systemImage: "books.vertical")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.ink)
+
+                Spacer()
+
+                Picker("练习词书", selection: $appState.selectedCategoryId) {
+                    Text("全部词书").tag(String?.none)
+                    ForEach(appState.practiceCategories) { category in
+                        Text(category.name).tag(Optional(category.id))
+                    }
+                }
+                .pickerStyle(.menu)
+                .tint(AppTheme.blue)
+                .disabled(appState.isLoading)
+            }
+
+            if appState.isLoading {
+                ProgressView("正在载入词书…")
+                    .font(.footnote)
+                    .tint(AppTheme.blue)
+            }
+        }
+        .onChange(of: appState.selectedCategoryId) { _, _ in
+            onSelectionChanged()
+            Task {
+                await appState.sync(refreshCategories: false)
+            }
+        }
+    }
+}

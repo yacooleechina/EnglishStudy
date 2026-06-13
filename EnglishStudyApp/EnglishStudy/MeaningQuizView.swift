@@ -10,6 +10,11 @@ struct MeaningQuizView: View {
 
     var body: some View {
         AppScreen(title: "中文意思", subtitle: "输入中文释义，系统会和欧路释义做匹配。") {
+            PracticeBookPicker {
+                resetForNextWord()
+                speech.stopAll()
+            }
+
             if let item = appState.currentWord {
                 WordHero(word: item.word, caption: "写出中文意思")
 

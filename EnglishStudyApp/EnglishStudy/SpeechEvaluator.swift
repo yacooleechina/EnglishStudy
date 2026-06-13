@@ -97,7 +97,7 @@ final class SpeechEvaluator: ObservableObject {
     }
 
     func stop() {
-        cleanupRecording()
+        cleanupRecording(cancelRecognition: true)
         completion = nil
     }
 
@@ -106,12 +106,12 @@ final class SpeechEvaluator: ObservableObject {
         didComplete = true
         let finalTranscript = transcript
         let completion = completion
-        cleanupRecording()
+        cleanupRecording(cancelRecognition: false)
         self.completion = nil
         completion?(finalTranscript)
     }
 
-    private func cleanupRecording() {
+    private func cleanupRecording(cancelRecognition: Bool) {
         let wasUsingRecordingResources = audioEngine != nil || request != nil || task != nil || hasInputTap || isRecording
 
         activeSessionID = nil
@@ -128,13 +128,16 @@ final class SpeechEvaluator: ObservableObject {
             if audioEngine.isRunning {
                 audioEngine.stop()
             }
-            audioEngine.reset()
         }
         audioEngine = nil
 
         request?.endAudio()
         request = nil
-        task?.cancel()
+        if cancelRecognition {
+            task?.cancel()
+        } else {
+            task?.finish()
+        }
         task = nil
 
         if wasUsingRecordingResources {

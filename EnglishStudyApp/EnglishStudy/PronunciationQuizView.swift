@@ -19,6 +19,13 @@ struct PronunciationQuizView: View {
 
     var body: some View {
         AppScreen(title: "发音练习", subtitle: "先听标准发音，再录音朗读，系统会识别并反馈。") {
+            if self.item == nil {
+                PracticeBookPicker {
+                    resetForNextWord()
+                    speech.stopAll()
+                }
+            }
+
             if let item = displayedItem {
                 WordHero(word: item.word, caption: "听、读、校正")
 
