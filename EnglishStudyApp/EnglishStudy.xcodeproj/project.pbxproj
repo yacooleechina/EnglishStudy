@@ -21,7 +21,14 @@
 		1A000001000000000000000C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A000101000000000000000C /* SettingsView.swift */; };
 		1A000001000000000000000D /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A000101000000000000000D /* DesignSystem.swift */; };
 		1A000001000000000000000E /* WordDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A000101000000000000000E /* WordDetailView.swift */; };
+		1A000001000000000000000F /* VocabularyBooks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A000101000000000000000F /* VocabularyBooks.swift */; };
+		1A0000010000000000000010 /* VocabularyBooksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0001010000000000000010 /* VocabularyBooksView.swift */; };
 		1A0000020000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A0001020000000000000001 /* Assets.xcassets */; };
+		1A0000020000000000000002 /* high-school.json in Resources */ = {isa = PBXBuildFile; fileRef = 1A0001020000000000000002 /* high-school.json */; };
+		1A0000020000000000000003 /* cet4.json in Resources */ = {isa = PBXBuildFile; fileRef = 1A0001020000000000000003 /* cet4.json */; };
+		1A0000020000000000000004 /* cet6.json in Resources */ = {isa = PBXBuildFile; fileRef = 1A0001020000000000000004 /* cet6.json */; };
+		1A0000020000000000000005 /* toefl.json in Resources */ = {isa = PBXBuildFile; fileRef = 1A0001020000000000000005 /* toefl.json */; };
+		1A0000020000000000000006 /* ECDICT-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = 1A0001020000000000000006 /* ECDICT-LICENSE.txt */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,7 +46,14 @@
 		1A000101000000000000000C /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		1A000101000000000000000D /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		1A000101000000000000000E /* WordDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordDetailView.swift; sourceTree = "<group>"; };
+		1A000101000000000000000F /* VocabularyBooks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyBooks.swift; sourceTree = "<group>"; };
+		1A0001010000000000000010 /* VocabularyBooksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyBooksView.swift; sourceTree = "<group>"; };
 		1A0001020000000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		1A0001020000000000000002 /* high-school.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = VocabularyData/high-school.json; sourceTree = "<group>"; };
+		1A0001020000000000000003 /* cet4.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = VocabularyData/cet4.json; sourceTree = "<group>"; };
+		1A0001020000000000000004 /* cet6.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = VocabularyData/cet6.json; sourceTree = "<group>"; };
+		1A0001020000000000000005 /* toefl.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = VocabularyData/toefl.json; sourceTree = "<group>"; };
+		1A0001020000000000000006 /* ECDICT-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "VocabularyData/ECDICT-LICENSE.txt"; sourceTree = "<group>"; };
 		1A0002010000000000000001 /* EnglishStudy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EnglishStudy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -79,7 +93,14 @@
 				1A000101000000000000000C /* SettingsView.swift */,
 				1A000101000000000000000D /* DesignSystem.swift */,
 				1A000101000000000000000E /* WordDetailView.swift */,
+				1A000101000000000000000F /* VocabularyBooks.swift */,
+				1A0001010000000000000010 /* VocabularyBooksView.swift */,
 				1A0001020000000000000001 /* Assets.xcassets */,
+				1A0001020000000000000002 /* high-school.json */,
+				1A0001020000000000000003 /* cet4.json */,
+				1A0001020000000000000004 /* cet6.json */,
+				1A0001020000000000000005 /* toefl.json */,
+				1A0001020000000000000006 /* ECDICT-LICENSE.txt */,
 			);
 			path = EnglishStudy;
 			sourceTree = "<group>";
@@ -151,6 +172,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				1A0000020000000000000001 /* Assets.xcassets in Resources */,
+				1A0000020000000000000002 /* high-school.json in Resources */,
+				1A0000020000000000000003 /* cet4.json in Resources */,
+				1A0000020000000000000004 /* cet6.json in Resources */,
+				1A0000020000000000000005 /* toefl.json in Resources */,
+				1A0000020000000000000006 /* ECDICT-LICENSE.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -175,6 +201,8 @@
 				1A000001000000000000000C /* SettingsView.swift in Sources */,
 				1A000001000000000000000D /* DesignSystem.swift in Sources */,
 				1A000001000000000000000E /* WordDetailView.swift in Sources */,
+				1A000001000000000000000F /* VocabularyBooks.swift in Sources */,
+				1A0000010000000000000010 /* VocabularyBooksView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -10,7 +10,7 @@ struct WordbookView: View {
                     Text("生词本")
                         .font(.system(size: 36, weight: .black, design: .rounded))
                         .foregroundStyle(AppTheme.ink)
-                    Text("从欧路同步后，在这里浏览和开始练习。")
+                    Text("浏览欧路生词和已导入词书，并开始练习。")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(AppTheme.muted)
                 }
@@ -24,9 +24,9 @@ struct WordbookView: View {
 
                 if appState.words.isEmpty {
                     GlassPanel {
-                        Label("还没有同步单词", systemImage: "tray")
+                        Label("还没有可学习的单词", systemImage: "tray")
                             .font(.headline)
-                        Text("在设置中填写欧路 Authorization 后同步生词本。")
+                        Text("可以同步欧路生词本，或从首页导入内置词书。")
                             .foregroundStyle(AppTheme.muted)
                     }
                 } else {

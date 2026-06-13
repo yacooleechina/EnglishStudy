@@ -9,6 +9,8 @@ struct ContentView: View {
                 GlassPanel {
                     HomeLink(title: "生词本", systemImage: "books.vertical", destination: WordbookView())
                     Divider()
+                    HomeLink(title: "导入词书", systemImage: "square.and.arrow.down", destination: VocabularyBooksView())
+                    Divider()
                     HomeLink(title: "中文意思", systemImage: "character.book.closed", destination: MeaningQuizView())
                     Divider()
                     HomeLink(title: "发音练习", systemImage: "waveform", destination: PronunciationQuizView())

@@ -11,6 +11,7 @@ final class AppState: ObservableObject {
     @Published var categories: [WordbookCategory] = []
     @Published var words: [StudyWord] = []
     @Published private(set) var archivedWords: [StudyWord] = []
+    @Published private(set) var importedVocabularyBookIds = Set<String>()
     @Published var selectedCategoryId: String?
     @Published var currentIndex = 0
     @Published var isLoading = false
@@ -18,12 +19,15 @@ final class AppState: ObservableObject {
     private var hasAttemptedInitialSync = false
     private var successCounts: [String: Int] = [:]
     private var pendingArchiveIds = Set<String>()
+    private var remoteCategories: [WordbookCategory] = []
+    private var remoteWords: [StudyWord] = []
 
     private static let usernameKey = "eudic.username"
     private static let archiveCategoryName = "已归档单词"
     private static let archivedWordsKey = "study.archivedWords"
     private static let successCountsKey = "study.successCounts"
     private static let pendingArchiveIdsKey = "study.pendingArchiveIds"
+    private static let importedVocabularyBookIdsKey = "study.importedVocabularyBookIds"
     private static let archiveThreshold = 3
 
     init() {
@@ -46,6 +50,12 @@ final class AppState: ObservableObject {
         if let savedIds = UserDefaults.standard.stringArray(forKey: Self.pendingArchiveIdsKey) {
             pendingArchiveIds = Set(savedIds)
         }
+        if let savedIds = UserDefaults.standard.stringArray(forKey: Self.importedVocabularyBookIdsKey) {
+            importedVocabularyBookIds = Set(savedIds)
+        }
+
+        refreshCategoryList()
+        rebuildVisibleWords()
     }
 
     var client: EudicClient {
@@ -59,6 +69,10 @@ final class AppState: ObservableObject {
 
     var practiceCategories: [WordbookCategory] {
         categories.filter { $0.name != Self.archiveCategoryName }
+    }
+
+    var importedVocabularyBooks: [BuiltinVocabularyBook] {
+        BuiltinVocabularyBook.allCases.filter { importedVocabularyBookIds.contains($0.id) }
     }
 
     func saveAuthorization() {
@@ -81,21 +95,26 @@ final class AppState: ObservableObject {
         do {
             var archiveSyncWarning: String?
             if refreshCategories {
-                categories = try await client.categories()
+                remoteCategories = authorization.isEmpty ? [] : try await client.categories()
+                refreshCategoryList()
             }
 
-            if !pendingArchiveIds.isEmpty {
+            if !pendingArchiveIds.isEmpty, !authorization.isEmpty {
                 archiveSyncWarning = await retryPendingArchives()
             }
 
-            if let archiveCategory = categories.first(where: { $0.name == Self.archiveCategoryName }) {
+            if !authorization.isEmpty,
+               let archiveCategory = remoteCategories.first(where: { $0.name == Self.archiveCategoryName }) {
                 let remoteArchivedWords = try await client.allWords(categoryId: archiveCategory.id)
                 mergeArchivedWords(remoteArchivedWords)
             }
 
-            let syncedWords = try await client.allWords(categoryId: selectedCategoryId)
-            let archivedIds = Set(archivedWords.map(\.id))
-            words = syncedWords.filter { !archivedIds.contains($0.id) }
+            if BuiltinVocabularyBook.book(forCategoryId: selectedCategoryId) == nil {
+                remoteWords = authorization.isEmpty
+                    ? []
+                    : try await client.allWords(categoryId: selectedCategoryId)
+            }
+            rebuildVisibleWords()
             currentIndex = 0
             errorMessage = archiveSyncWarning
         } catch {
@@ -104,9 +123,34 @@ final class AppState: ObservableObject {
     }
 
     func syncOnLaunch() async {
-        guard !hasAttemptedInitialSync, !authorization.isEmpty else { return }
+        guard !hasAttemptedInitialSync,
+              !authorization.isEmpty || !importedVocabularyBooks.isEmpty else { return }
         hasAttemptedInitialSync = true
         await sync()
+    }
+
+    func isVocabularyBookImported(_ book: BuiltinVocabularyBook) -> Bool {
+        importedVocabularyBookIds.contains(book.id)
+    }
+
+    func importVocabularyBook(_ book: BuiltinVocabularyBook) {
+        importedVocabularyBookIds.insert(book.id)
+        selectedCategoryId = book.id
+        saveImportedVocabularyBooks()
+        refreshCategoryList()
+        rebuildVisibleWords()
+        currentIndex = 0
+    }
+
+    func removeVocabularyBook(_ book: BuiltinVocabularyBook) {
+        importedVocabularyBookIds.remove(book.id)
+        if selectedCategoryId == book.id {
+            selectedCategoryId = nil
+        }
+        saveImportedVocabularyBooks()
+        refreshCategoryList()
+        rebuildVisibleWords()
+        currentIndex = 0
     }
 
     func nextWord() {
@@ -132,6 +176,12 @@ final class AppState: ObservableObject {
         }
 
         archiveLocally(item)
+
+        guard !authorization.isEmpty else {
+            pendingArchiveIds.insert(item.id)
+            saveProgress()
+            return true
+        }
 
         do {
             let archiveCategory = try await ensureArchiveCategory()
@@ -176,11 +226,12 @@ final class AppState: ObservableObject {
     }
 
     private func ensureArchiveCategory() async throws -> WordbookCategory {
-        if let category = categories.first(where: { $0.name == Self.archiveCategoryName }) {
+        if let category = remoteCategories.first(where: { $0.name == Self.archiveCategoryName }) {
             return category
         }
         let category = try await client.createCategory(name: Self.archiveCategoryName)
-        categories.append(category)
+        remoteCategories.append(category)
+        refreshCategoryList()
         return category
     }
 
@@ -206,5 +257,40 @@ final class AppState: ObservableObject {
             UserDefaults.standard.set(data, forKey: Self.successCountsKey)
         }
         UserDefaults.standard.set(Array(pendingArchiveIds), forKey: Self.pendingArchiveIdsKey)
+    }
+
+    private func saveImportedVocabularyBooks() {
+        UserDefaults.standard.set(
+            Array(importedVocabularyBookIds),
+            forKey: Self.importedVocabularyBookIdsKey
+        )
+    }
+
+    private func refreshCategoryList() {
+        categories = remoteCategories + importedVocabularyBooks.map(\.category)
+    }
+
+    private func rebuildVisibleWords() {
+        do {
+            let candidateWords: [StudyWord]
+            if let selectedBook = BuiltinVocabularyBook.book(forCategoryId: selectedCategoryId) {
+                candidateWords = try VocabularyBookStore.words(for: selectedBook)
+            } else if selectedCategoryId != nil {
+                candidateWords = remoteWords
+            } else {
+                let builtinWords = try importedVocabularyBooks.flatMap {
+                    try VocabularyBookStore.words(for: $0)
+                }
+                candidateWords = remoteWords + builtinWords
+            }
+
+            var seenIds = Set<String>()
+            let archivedIds = Set(archivedWords.map(\.id))
+            words = candidateWords.filter {
+                !archivedIds.contains($0.id) && seenIds.insert($0.id).inserted
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }
