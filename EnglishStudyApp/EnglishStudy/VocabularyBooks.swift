@@ -65,6 +65,7 @@ enum BuiltinVocabularyBook: String, CaseIterable, Identifiable {
 
 enum VocabularyBookStore {
     private static var cache: [BuiltinVocabularyBook: [StudyWord]] = [:]
+    private static var wordIdCache: [BuiltinVocabularyBook: Set<String>] = [:]
 
     static func words(for book: BuiltinVocabularyBook) throws -> [StudyWord] {
         if let cached = cache[book] {
@@ -79,11 +80,21 @@ enum VocabularyBookStore {
         let data = try Data(contentsOf: url, options: .mappedIfSafe)
         let words = try JSONDecoder().decode([StudyWord].self, from: data)
         cache[book] = words
+        wordIdCache[book] = Set(words.map(\.id))
         return words
+    }
+
+    static func contains(wordId: String, in book: BuiltinVocabularyBook) -> Bool {
+        if let ids = wordIdCache[book] {
+            return ids.contains(wordId)
+        }
+        guard let words = try? words(for: book) else { return false }
+        return words.contains { $0.id == wordId }
     }
 
     static func discard(_ book: BuiltinVocabularyBook) {
         cache.removeValue(forKey: book)
+        wordIdCache.removeValue(forKey: book)
     }
 }
 

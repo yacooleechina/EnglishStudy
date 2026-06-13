@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct WordDetailView: View {
+    @EnvironmentObject private var appState: AppState
     let item: StudyWord
+    var showsWordbooks = false
     @StateObject private var speech = SpeechEvaluator()
 
     var body: some View {
@@ -30,6 +32,15 @@ struct WordDetailView: View {
 
             if let contextLine = item.contextLine, !contextLine.isEmpty {
                 detailSection(title: "上下文", icon: "quote.opening", text: contextLine)
+            }
+
+            if showsWordbooks {
+                let wordbookNames = appState.wordbookNames(for: item)
+                detailSection(
+                    title: "所属词书",
+                    icon: "books.vertical",
+                    text: wordbookNames.isEmpty ? "未标记词书" : wordbookNames.joined(separator: "、")
+                )
             }
 
             GlassPanel {

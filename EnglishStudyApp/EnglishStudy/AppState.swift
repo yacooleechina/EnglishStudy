@@ -179,6 +179,23 @@ final class AppState: ObservableObject {
         successCounts[item.id, default: 0]
     }
 
+    func wordbookNames(for item: StudyWord) -> [String] {
+        let archiveCategoryId = remoteCategories.first {
+            $0.name == Self.archiveCategoryName
+        }?.id
+        var names: [String] = (item.categoryIds ?? []).compactMap { categoryId -> String? in
+            guard categoryId != archiveCategoryId else { return nil }
+            return practiceCategories.first { $0.id == categoryId }?.name
+        }
+
+        for book in importedVocabularyBooks
+        where VocabularyBookStore.contains(wordId: item.id, in: book)
+            && !names.contains(book.title) {
+            names.append(book.title)
+        }
+        return names
+    }
+
     func recordCorrectCheck(for item: StudyWord, kind: PracticeKind) async -> Bool {
         recordCompletion(for: item, kind: kind)
 
@@ -246,8 +263,14 @@ final class AppState: ObservableObject {
     }
 
     private func archiveLocally(_ item: StudyWord) {
-        if !archivedWords.contains(where: { $0.id == item.id }) {
-            archivedWords.insert(item, at: 0)
+        let archivedItem = itemWithCurrentWordbook(item)
+        if let existingIndex = archivedWords.firstIndex(where: { $0.id == item.id }) {
+            archivedWords[existingIndex] = mergingWordbookIds(
+                archivedWords[existingIndex],
+                with: archivedItem
+            )
+        } else {
+            archivedWords.insert(archivedItem, at: 0)
         }
 
         if let index = words.firstIndex(where: { $0.id == item.id }) {
@@ -266,7 +289,11 @@ final class AppState: ObservableObject {
     private func mergeArchivedWords(_ remoteWords: [StudyWord]) {
         var archivedById = Dictionary(uniqueKeysWithValues: archivedWords.map { ($0.id, $0) })
         for item in remoteWords {
-            archivedById[item.id] = item
+            if let localItem = archivedById[item.id] {
+                archivedById[item.id] = mergingWordbookIds(item, with: localItem)
+            } else {
+                archivedById[item.id] = item
+            }
             successCounts[item.id] = Self.archiveThreshold
             pendingArchiveIds.remove(item.id)
         }
@@ -340,6 +367,42 @@ final class AppState: ObservableObject {
             completedPronunciationIds.insert(item.id)
         }
         saveProgress()
+    }
+
+    private func itemWithCurrentWordbook(_ item: StudyWord) -> StudyWord {
+        var categoryIds = item.categoryIds ?? []
+        if let selectedCategoryId, !categoryIds.contains(selectedCategoryId) {
+            categoryIds.append(selectedCategoryId)
+        } else if selectedCategoryId == nil {
+            for book in importedVocabularyBooks
+            where VocabularyBookStore.contains(wordId: item.id, in: book)
+                && !categoryIds.contains(book.id) {
+                categoryIds.append(book.id)
+            }
+        }
+        return StudyWord(
+            word: item.word,
+            exp: item.exp,
+            addTime: item.addTime,
+            star: item.star,
+            contextLine: item.contextLine,
+            categoryIds: categoryIds
+        )
+    }
+
+    private func mergingWordbookIds(_ primary: StudyWord, with secondary: StudyWord) -> StudyWord {
+        var categoryIds = primary.categoryIds ?? []
+        for categoryId in secondary.categoryIds ?? [] where !categoryIds.contains(categoryId) {
+            categoryIds.append(categoryId)
+        }
+        return StudyWord(
+            word: primary.word,
+            exp: primary.exp ?? secondary.exp,
+            addTime: primary.addTime ?? secondary.addTime,
+            star: primary.star ?? secondary.star,
+            contextLine: primary.contextLine ?? secondary.contextLine,
+            categoryIds: categoryIds
+        )
     }
 
     private func saveImportedVocabularyBooks() {

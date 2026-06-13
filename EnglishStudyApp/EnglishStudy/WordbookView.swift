@@ -138,7 +138,7 @@ struct ArchivedWordsView: View {
                 } else {
                     ForEach(appState.archivedWords) { item in
                         NavigationLink {
-                            WordDetailView(item: item)
+                            WordDetailView(item: item, showsWordbooks: true)
                         } label: {
                             GlassPanel {
                                 HStack(alignment: .top, spacing: 12) {
@@ -152,6 +152,16 @@ struct ArchivedWordsView: View {
                                                 .foregroundStyle(AppTheme.muted)
                                                 .lineLimit(2)
                                         }
+                                        let wordbookNames = appState.wordbookNames(for: item)
+                                        Label(
+                                            wordbookNames.isEmpty
+                                                ? "未标记词书"
+                                                : wordbookNames.joined(separator: " · "),
+                                            systemImage: "books.vertical"
+                                        )
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(AppTheme.blue)
+                                        .lineLimit(2)
                                     }
                                     Spacer()
                                     Image(systemName: "chevron.right")
